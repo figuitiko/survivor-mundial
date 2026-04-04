@@ -1,21 +1,43 @@
+export const dynamic = "force-dynamic";
+
 import { ArrowUpRight, Flame, Goal, Medal } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { dashboardMetrics, leaderboard, matchdayMatches, statChallenges } from "@/lib/mock-data";
+import { statChallenges } from "@/lib/mock-data";
+import { getDashboardData, SurvivorStatus } from "@/lib/survivor-queries";
+import { getSurvivorStatusLabel } from "@/lib/survivor";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const data = await getDashboardData();
   const featuredChallenge = statChallenges[0];
+  const dashboardMetrics = [
+    {
+      label: "Current Streak",
+      value: `${data.user.currentStreak}`.padStart(2, "0"),
+      detail: `${getSurvivorStatusLabel(data.user.survivorStatus)} after the latest settled matchday.`
+    },
+    {
+      label: "Survivor Points",
+      value: `${data.user.survivorPoints}`,
+      detail: "Points are awarded only when a pick survives settlement."
+    },
+    {
+      label: "Pool Alive",
+      value: `${data.aliveCount}`,
+      detail: "Entrants still standing in the tournament."
+    }
+  ];
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Control room"
         title="Quarterfinals at a glance"
-        description="Your survivor pulse, challenge traction, and the next decisions that can shift the leaderboard before kickoff."
-        badge="Mocked live data"
+        description="Your survivor pulse, challenge traction, and the next decisions that shift the board before the current matchday locks."
+        badge={getSurvivorStatusLabel(data.user.survivorStatus)}
       />
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -32,7 +54,7 @@ export default function DashboardPage() {
                 </p>
                 <div className="mt-5 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[color:var(--accent)]">
                   {index === 0 ? <Flame className="size-3.5" /> : index === 1 ? <Medal className="size-3.5" /> : <Goal className="size-3.5" />}
-                  Match-ready
+                  {data.user.survivorStatus === SurvivorStatus.ALIVE ? "Match-ready" : "Needs reset"}
                 </div>
               </article>
             ))}
@@ -58,7 +80,7 @@ export default function DashboardPage() {
             <Progress value={61} />
           </div>
           <p className="mt-5 text-xs uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
-            {featuredChallenge.deadline}
+              {featuredChallenge.deadline}
           </p>
         </div>
       </section>
@@ -68,41 +90,49 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="eyebrow">Upcoming picks</p>
-              <h2 className="font-display mt-4 text-3xl">Three matches still open for lock.</h2>
+              <h2 className="font-display mt-4 text-3xl">
+                {data.currentMatchday ? `${data.currentMatchday.title} is open.` : "No open matchday."}
+              </h2>
             </div>
             <ArrowUpRight className="size-5 text-[color:var(--accent)]" />
           </div>
           <div className="mt-7 grid gap-4">
-            {matchdayMatches.map((match) => (
+            {data.currentMatchday?.matches.map((match) => (
               <article
                 key={match.id}
                 className="grid gap-4 rounded-[1.8rem] border border-[color:var(--border)] bg-white/70 px-5 py-5 md:grid-cols-[1fr_auto_auto]"
               >
                 <div>
                   <p className="text-xs uppercase tracking-[0.26em] text-[color:var(--muted-foreground)]">
-                    {match.group}
+                    {data.currentMatchday?.title}
                   </p>
                   <h3 className="font-display mt-2 text-2xl">
                     {match.homeTeam} vs {match.awayTeam}
                   </h3>
                   <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
-                    {match.kickoff} · {match.venue}
+                    {match.venue}
                   </p>
                 </div>
                 <div className="text-sm">
-                  <p className="text-[color:var(--muted-foreground)]">Confidence</p>
-                  <p className="font-semibold">{Math.round(match.confidence * 100)}%</p>
+                  <p className="text-[color:var(--muted-foreground)]">Status</p>
+                  <p className="font-semibold">{match.status}</p>
                 </div>
                 <div className="text-sm">
-                  <p className="text-[color:var(--muted-foreground)]">Trend</p>
-                  <p className="font-semibold capitalize">{match.trend}</p>
+                  <p className="text-[color:var(--muted-foreground)]">Winner</p>
+                  <p className="font-semibold capitalize">{match.winner ?? "Open"}</p>
                 </div>
               </article>
-            ))}
+            )) ?? (
+              <EmptyState
+                eyebrow="Matchday"
+                title="No active matchday"
+                description="Once settlement completes and a new matchday is seeded, fixtures will appear here."
+              />
+            )}
           </div>
         </div>
 
-        {leaderboard.length === 0 ? (
+        {data.leaderboardRows.length === 0 ? (
           <EmptyState
             eyebrow="Leaderboard"
             title="No standings yet"
@@ -112,21 +142,44 @@ export default function DashboardPage() {
           <div className="section-shell rounded-[2.2rem] px-6 py-6 md:px-8 md:py-8">
             <p className="eyebrow">Leaderboard pulse</p>
             <div className="mt-6 space-y-4">
-              {leaderboard.slice(0, 4).map((entry) => (
+              {data.leaderboardRows.slice(0, 4).map((entry, index) => (
                 <div
-                  key={entry.rank}
+                  key={entry.id}
                   className="grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-[color:var(--border)] pb-4 last:border-b-0"
                 >
-                  <p className="font-display text-3xl">{entry.rank}</p>
+                  <p className="font-display text-3xl">{index + 1}</p>
                   <div>
-                    <p className="text-sm font-semibold">{entry.player}</p>
+                    <p className="text-sm font-semibold">{entry.name}</p>
                     <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
-                      {entry.nation} · streak {entry.streak}
+                      {entry.favoriteNation ?? "N/A"} · streak {entry.currentStreak}
                     </p>
                   </div>
-                  <p className="text-right text-sm font-semibold">{entry.points} pts</p>
+                  <p className="text-right text-sm font-semibold">{entry.survivorPoints} pts</p>
                 </div>
               ))}
+            </div>
+            <div className="mt-8">
+              <p className="eyebrow">Pick history</p>
+              <div className="mt-4 space-y-3">
+                {data.recentPicks.map((pick) => (
+                  <div
+                    key={pick.id}
+                    className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-[color:var(--border)] bg-white/60 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {pick.selectedTeam} over {pick.opponent}
+                      </p>
+                      <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
+                        {pick.matchday}
+                      </p>
+                    </div>
+                    <Badge variant={pick.outcome === "WON" ? "success" : "default"}>
+                      {pick.outcome}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

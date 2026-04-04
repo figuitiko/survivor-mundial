@@ -1,10 +1,10 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { submitPick } from "@/app/(app)/picks/actions";
+import { submitSurvivalPick } from "@/app/(app)/picks/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { MatchCard } from "@/lib/types";
@@ -12,17 +12,19 @@ import { pickSubmissionSchema, type PickSubmission } from "@/lib/validations/pic
 
 type PickFormProps = {
   matches: MatchCard[];
+  currentPickMatchId?: string | null;
+  currentPickTeam?: string | null;
 };
 
-export function PickForm({ matches }: PickFormProps) {
+export function PickForm({ matches, currentPickMatchId, currentPickTeam }: PickFormProps) {
   const [serverMessage, setServerMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
   const form = useForm<PickSubmission>({
     resolver: zodResolver(pickSubmissionSchema),
     defaultValues: {
-      matchId: matches[0]?.id ?? "",
-      selectedTeam: matches[0]?.homeTeam ?? "",
+      matchId: currentPickMatchId ?? matches[0]?.id ?? "",
+      selectedTeam: currentPickTeam ?? matches[0]?.homeTeam ?? "",
       confidence: 70
     }
   });
@@ -33,12 +35,21 @@ export function PickForm({ matches }: PickFormProps) {
   });
   const selectedMatch = matches.find((match) => match.id === watchedMatchId) ?? matches[0];
 
+  useEffect(() => {
+    const currentSelectedTeam = form.getValues("selectedTeam");
+    const allowedTeams = [selectedMatch?.homeTeam, selectedMatch?.awayTeam].filter(Boolean);
+
+    if (allowedTeams.length > 0 && !allowedTeams.includes(currentSelectedTeam)) {
+      form.setValue("selectedTeam", allowedTeams[0] ?? "");
+    }
+  }, [form, selectedMatch]);
+
   const onSubmit = form.handleSubmit((values) => {
     setStatus("idle");
     setServerMessage("");
 
     startTransition(async () => {
-      const result = await submitPick(values);
+      const result = await submitSurvivalPick(values);
       setStatus(result.status);
       setServerMessage(result.message);
     });
@@ -46,7 +57,7 @@ export function PickForm({ matches }: PickFormProps) {
 
   return (
     <form onSubmit={onSubmit} className="section-shell rounded-[2.2rem] px-6 py-6 md:px-8 md:py-8">
-      <p className="eyebrow">Submit pick</p>
+      <p className="eyebrow">Submit survivor pick</p>
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <label className="grid gap-2 text-sm">
           Match
@@ -95,7 +106,7 @@ export function PickForm({ matches }: PickFormProps) {
           Current fixture: {selectedMatch?.kickoff} at {selectedMatch?.venue}
         </p>
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          Lock pick
+          Save survivor pick
         </Button>
       </div>
 

@@ -6,11 +6,8 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not set.");
-}
+const connectionString =
+  process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/survivor_mundial";
 
 const adapter = new PrismaPg({ connectionString });
 

@@ -19,6 +19,8 @@ export type MatchCard = {
   group: string;
   confidence: number;
   trend: "up" | "steady" | "down";
+  isLocked?: boolean;
+  selectedTeam?: string | null;
 };
 
 export type StatChallenge = {
@@ -37,7 +39,8 @@ export type LeaderboardEntry = {
   nation: string;
   streak: number;
   points: number;
-  delta: string;
+  status: "ALIVE" | "ELIMINATED";
+  isCurrentUser?: boolean;
 };
 
 export type UserProfile = {
@@ -46,4 +49,21 @@ export type UserProfile = {
   favoriteNation: string;
   bio: string;
   streakGoal: number;
+};
+
+export type UsedTeam = {
+  id: string;
+  team: string;
+  matchday: string;
+  outcome: "PENDING" | "WON" | "LOST" | "MISSED";
+};
+
+export type PickHistoryEntry = {
+  id: string;
+  matchday: string;
+  selectedTeam: string;
+  opponent: string;
+  kickoff: string;
+  outcome: "PENDING" | "WON" | "LOST" | "MISSED";
+  pointsAwarded: number;
 };

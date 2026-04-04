@@ -1,6 +1,6 @@
 # Survivor Mundial
 
-Phase 1 MVP shell for a survivor pool plus stat-challenges product built with Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI primitives, Prisma, and PostgreSQL.
+Phase 2 survivor MVP with a real Prisma-backed survivor core plus stat-challenge scaffolding, built with Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI primitives, Prisma, and PostgreSQL.
 
 ## Stack
 
@@ -16,9 +16,9 @@ Phase 1 MVP shell for a survivor pool plus stat-challenges product built with Ne
 
 - `/` landing page
 - `/dashboard` protected app dashboard
-- `/picks` matchday pick flow
+- `/picks` matchday survivor pick flow with used-team and history views
 - `/challenges` stat challenge flow
-- `/leaderboard` standings
+- `/leaderboard` survivor standings
 - `/profile` player settings
 
 ## File structure
@@ -47,7 +47,9 @@ components/
   brand-mark.tsx
   empty-state.tsx
   page-header.tsx
+  picks/pick-history.tsx
   picks/pick-form.tsx
+  picks/used-teams.tsx
   challenges/challenge-join-form.tsx
   profile/profile-form.tsx
   ui/
@@ -55,6 +57,9 @@ lib/
   auth.ts
   mock-data.ts
   prisma.ts
+  survivor.ts
+  survivor-queries.ts
+  survivor-settlement.ts
   types.ts
   utils.ts
   validations/
@@ -89,9 +94,9 @@ prisma/
    npm run dev
    ```
 
-## Prisma draft schema
+## Survivor core
 
-The schema currently models:
+The Prisma schema now models:
 
 - `User`
 - `Matchday`
@@ -100,11 +105,17 @@ The schema currently models:
 - `StatChallenge`
 - `ChallengeEntry`
 
-It is intentionally scoped as a draft for future phases, with enough shape to support survivor picks, stat challenges, and player records.
+The survivor-specific rules now live server-side:
+
+- one pick per user per matchday
+- no reusing a team across the tournament
+- picks locked before kickoff
+- settlement updates pick outcomes and alive/eliminated status
+- dashboard and leaderboard derive from persisted Prisma state
 
 ## Notes
 
 - Prisma 7 is configured with `prisma.config.ts`, the `prisma-client` generator, and `@prisma/adapter-pg`.
 - App routes are protected through a mock session helper in `lib/auth.ts`.
-- The current UI uses mocked placeholder data in `lib/mock-data.ts`.
-- Pick, challenge, and profile flows already validate with Zod and call server actions, so real persistence can be added without replacing the forms.
+- Survivor pick rules live in `app/(app)/picks/actions.ts` and `lib/survivor-settlement.ts`.
+- The challenge flow still uses placeholder app data in `lib/mock-data.ts`.

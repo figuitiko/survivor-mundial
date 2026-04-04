@@ -1,6 +1,5 @@
 import type {
   DashboardMetric,
-  LeaderboardEntry,
   MatchCard,
   NavigationItem,
   StatChallenge,
@@ -96,14 +95,6 @@ export const statChallenges: StatChallenge[] = [
   }
 ];
 
-export const leaderboard: LeaderboardEntry[] = [
-  { rank: 1, player: "Camila R.", nation: "MEX", streak: 9, points: 1840, delta: "+2" },
-  { rank: 2, player: "Iker T.", nation: "ESP", streak: 8, points: 1790, delta: "+1" },
-  { rank: 3, player: "Mara V.", nation: "ARG", streak: 8, points: 1768, delta: "-1" },
-  { rank: 4, player: "You", nation: "USA", streak: 6, points: 1686, delta: "+5" },
-  { rank: 5, player: "Leo S.", nation: "BRA", streak: 6, points: 1654, delta: "+3" }
-];
-
 export const profile: UserProfile = {
   name: "Frank Ortega",
   username: "frankplayssurvivor",
@@ -114,6 +105,6 @@ export const profile: UserProfile = {
 
 export const appHighlights = [
   "Protected survivor pool workspace ready for real auth wiring.",
-  "Matchday pick forms validated with Zod and server action stubs.",
-  "Stat challenge flow designed for future live odds and syncing."
+  "Survivor picks now enforce one entry per matchday and no reused nations.",
+  "Settlement logic updates alive status and leaderboard state from Prisma."
 ];
