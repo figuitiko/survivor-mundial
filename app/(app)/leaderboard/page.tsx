@@ -26,24 +26,27 @@ export default async function LeaderboardPage() {
         />
       ) : (
         <section className="section-shell overflow-hidden rounded-[2.2rem]">
-          <div className="hidden grid-cols-[72px_1.4fr_120px_120px_120px] gap-4 border-b border-[color:var(--border)] px-6 py-4 text-xs uppercase tracking-[0.24em] text-[color:var(--muted-foreground)] md:grid md:px-8">
+          <div className="hidden grid-cols-[72px_1.2fr_120px_120px_120px_120px] gap-4 border-b border-(--border) px-6 py-4 text-xs uppercase tracking-[0.24em] text-[color:var(--muted-foreground)] md:grid md:px-8">
             <span>Rank</span>
             <span>Player</span>
             <span>Streak</span>
             <span>Points</span>
+            <span>Bonus</span>
             <span>Status</span>
           </div>
-          <div className="divide-y divide-[color:var(--border)]">
+          <div className="divide-y divide-(--border)">
             {leaderboard.map((entry) => (
               <article
                 key={entry.rank}
-                className="grid gap-4 px-6 py-5 md:grid-cols-[72px_1.4fr_120px_120px_120px] md:items-center md:px-8"
+                className="grid gap-4 px-6 py-5 md:grid-cols-[72px_1.2fr_120px_120px_120px_120px] md:items-center md:px-8"
               >
                 <p className="font-display text-3xl">{entry.rank}</p>
                 <div>
                   <div className="flex items-center gap-3">
                     <p className="text-base font-semibold">{entry.player}</p>
-                    {entry.isCurrentUser ? <Badge variant="accent">You</Badge> : null}
+                    {entry.isCurrentUser ? (
+                      <Badge variant="accent">You</Badge>
+                    ) : null}
                   </div>
                   <p className="text-xs uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
                     {entry.nation}
@@ -51,7 +54,10 @@ export default async function LeaderboardPage() {
                 </div>
                 <p className="text-sm font-semibold">Streak {entry.streak}</p>
                 <p className="text-sm font-semibold">{entry.points} pts</p>
-                <p className="text-sm font-semibold text-[color:var(--accent)]">
+                <p className="text-sm font-semibold text-(--accent)">
+                  +{entry.challengeBonusPoints ?? 0}
+                </p>
+                <p className="text-sm font-semibold text-(--accent)">
                   {getSurvivorStatusLabel(entry.status)}
                 </p>
               </article>

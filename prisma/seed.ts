@@ -4,6 +4,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import {
   ChallengeDifficulty,
+  ChallengeState,
+  ChallengeType,
   MatchStatus,
   PickOutcome,
   PrismaClient,
@@ -24,9 +26,10 @@ async function main() {
     prisma.user.upsert({
       where: { email: "camila@example.com" },
       update: {
+        survivorPoints: 200,
+        challengeBonusPoints: 40,
         currentStreak: 2,
         longestStreak: 2,
-        survivorPoints: 200,
         survivorStatus: SurvivorStatus.ALIVE
       },
       create: {
@@ -36,18 +39,20 @@ async function main() {
         favoriteNation: "Mexico",
         bio: "Trusts tempo, travel, and midfield control.",
         streakGoal: 9,
+        survivorPoints: 200,
+        challengeBonusPoints: 40,
         currentStreak: 2,
         longestStreak: 2,
-        survivorPoints: 200,
         survivorStatus: SurvivorStatus.ALIVE
       }
     }),
     prisma.user.upsert({
       where: { email: "iker@example.com" },
       update: {
+        survivorPoints: 200,
+        challengeBonusPoints: 20,
         currentStreak: 2,
         longestStreak: 2,
-        survivorPoints: 200,
         survivorStatus: SurvivorStatus.ALIVE
       },
       create: {
@@ -57,18 +62,20 @@ async function main() {
         favoriteNation: "Spain",
         bio: "Chases compact defenses and matchup geometry.",
         streakGoal: 8,
+        survivorPoints: 200,
+        challengeBonusPoints: 20,
         currentStreak: 2,
         longestStreak: 2,
-        survivorPoints: 200,
         survivorStatus: SurvivorStatus.ALIVE
       }
     }),
     prisma.user.upsert({
       where: { email: "frank@example.com" },
       update: {
+        survivorPoints: 200,
+        challengeBonusPoints: 40,
         currentStreak: 2,
         longestStreak: 2,
-        survivorPoints: 200,
         survivorStatus: SurvivorStatus.ALIVE
       },
       create: {
@@ -78,18 +85,20 @@ async function main() {
         favoriteNation: "Mexico",
         bio: "Tracking survivor edges through venue splits, tempo, and squad rotation.",
         streakGoal: 10,
+        survivorPoints: 200,
+        challengeBonusPoints: 40,
         currentStreak: 2,
         longestStreak: 2,
-        survivorPoints: 200,
         survivorStatus: SurvivorStatus.ALIVE
       }
     }),
     prisma.user.upsert({
       where: { email: "mara@example.com" },
       update: {
+        survivorPoints: 100,
+        challengeBonusPoints: 0,
         currentStreak: 0,
         longestStreak: 1,
-        survivorPoints: 100,
         survivorStatus: SurvivorStatus.ELIMINATED,
         eliminatedAt: new Date("2026-06-20T23:00:00.000Z")
       },
@@ -100,9 +109,10 @@ async function main() {
         favoriteNation: "Argentina",
         bio: "Leans on shot quality and defensive transitions.",
         streakGoal: 8,
+        survivorPoints: 100,
+        challengeBonusPoints: 0,
         currentStreak: 0,
         longestStreak: 1,
-        survivorPoints: 100,
         survivorStatus: SurvivorStatus.ELIMINATED,
         eliminatedAt: new Date("2026-06-20T23:00:00.000Z")
       }
@@ -253,28 +263,159 @@ async function main() {
     })
   ]);
 
-  const matchByExternalId = new Map(matches.map((match) => [match.externalId, match]));
+  const matchByExternalId = new Map(
+    matches
+      .filter((match) => match.externalId)
+      .map((match) => [match.externalId as string, match])
+  );
 
-  const challenge = await prisma.statChallenge.upsert({
-    where: { slug: "corners-chaos" },
-    update: {
-      matchdayId: matchday3.id,
-      title: "Corners Chaos",
-      description: "Pick the quarterfinal with the highest corner count.",
-      rewardPoints: 120,
+  const challengeSeeds = [
+    {
+      slug: "matchday-2-btts",
+      matchdayId: matchday2.id,
+      matchId: matchByExternalId.get("md2-bra-col")?.id,
+      title: "Brazil vs Colombia: both teams score",
+      description: "Will both teams score in Brazil vs Colombia?",
+      type: ChallengeType.BOTH_TEAMS_SCORE,
       difficulty: ChallengeDifficulty.MEDIUM,
-      closesAt: new Date("2026-06-24T18:30:00.000Z")
+      bonusPoints: 20,
+      lockAt: new Date("2026-06-20T18:45:00.000Z"),
+      state: ChallengeState.SETTLED,
+      settledAt: new Date("2026-06-20T23:40:00.000Z"),
+      options: [
+        { label: "Yes", value: "yes", sortOrder: 0, isCorrect: false },
+        { label: "No", value: "no", sortOrder: 1, isCorrect: true }
+      ],
+      answers: [
+        { userEmail: "camila@example.com", value: "no", bonusPointsAwarded: 20, isCorrect: true },
+        { userEmail: "iker@example.com", value: "yes", bonusPointsAwarded: 0, isCorrect: false },
+        { userEmail: "frank@example.com", value: "no", bonusPointsAwarded: 20, isCorrect: true }
+      ]
     },
-    create: {
+    {
+      slug: "quarterfinal-goal-frenzy",
       matchdayId: matchday3.id,
-      slug: "corners-chaos",
-      title: "Corners Chaos",
-      description: "Pick the quarterfinal with the highest corner count.",
-      rewardPoints: 120,
-      difficulty: ChallengeDifficulty.MEDIUM,
-      closesAt: new Date("2026-06-24T18:30:00.000Z")
+      matchId: null,
+      title: "Quarterfinal goal frenzy",
+      description: "Which quarterfinal finishes with the most total goals?",
+      type: ChallengeType.MATCH_WITH_MOST_GOALS,
+      difficulty: ChallengeDifficulty.HIGH,
+      bonusPoints: 40,
+      lockAt: new Date("2026-06-24T18:40:00.000Z"),
+      state: ChallengeState.OPEN,
+      settledAt: null,
+      options: [
+        { label: "Argentina vs Uruguay", value: "arg-uru", sortOrder: 0, isCorrect: false },
+        { label: "France vs Portugal", value: "fra-por", sortOrder: 1, isCorrect: false }
+      ],
+      answers: [
+        { userEmail: "camila@example.com", value: "arg-uru", bonusPointsAwarded: 0, isCorrect: null },
+        { userEmail: "frank@example.com", value: "fra-por", bonusPointsAwarded: 0, isCorrect: null }
+      ]
     }
-  });
+  ];
+
+  for (const challengeSeed of challengeSeeds) {
+    const challenge = await prisma.challenge.upsert({
+      where: { slug: challengeSeed.slug },
+      update: {
+        matchdayId: challengeSeed.matchdayId,
+        matchId: challengeSeed.matchId,
+        title: challengeSeed.title,
+        description: challengeSeed.description,
+        type: challengeSeed.type,
+        difficulty: challengeSeed.difficulty,
+        bonusPoints: challengeSeed.bonusPoints,
+        lockAt: challengeSeed.lockAt,
+        state: challengeSeed.state,
+        settledAt: challengeSeed.settledAt
+      },
+      create: {
+        slug: challengeSeed.slug,
+        matchdayId: challengeSeed.matchdayId,
+        matchId: challengeSeed.matchId,
+        title: challengeSeed.title,
+        description: challengeSeed.description,
+        type: challengeSeed.type,
+        difficulty: challengeSeed.difficulty,
+        bonusPoints: challengeSeed.bonusPoints,
+        lockAt: challengeSeed.lockAt,
+        state: challengeSeed.state,
+        settledAt: challengeSeed.settledAt
+      }
+    });
+
+    const existingOptions = await prisma.challengeOption.findMany({
+      where: { challengeId: challenge.id }
+    });
+
+    const optionsByValue = new Map(existingOptions.map((option) => [option.value, option]));
+
+    for (const optionSeed of challengeSeed.options) {
+      const option = optionsByValue.get(optionSeed.value);
+
+      if (option) {
+        await prisma.challengeOption.update({
+          where: { id: option.id },
+          data: {
+            label: optionSeed.label,
+            sortOrder: optionSeed.sortOrder,
+            isCorrect: optionSeed.isCorrect
+          }
+        });
+      } else {
+        await prisma.challengeOption.create({
+          data: {
+            challengeId: challenge.id,
+            label: optionSeed.label,
+            value: optionSeed.value,
+            sortOrder: optionSeed.sortOrder,
+            isCorrect: optionSeed.isCorrect
+          }
+        });
+      }
+    }
+
+    const refreshedOptions = await prisma.challengeOption.findMany({
+      where: { challengeId: challenge.id }
+    });
+
+    const optionByValue = new Map(refreshedOptions.map((option) => [option.value, option]));
+
+    for (const answerSeed of challengeSeed.answers) {
+      const user = userByEmail.get(answerSeed.userEmail);
+      const option = optionByValue.get(answerSeed.value);
+
+      if (!user || !option) {
+        throw new Error(`Challenge seed dependency missing for ${answerSeed.userEmail} / ${answerSeed.value}.`);
+      }
+
+      await prisma.challengeAnswer.upsert({
+        where: {
+          userId_challengeId: {
+            userId: user.id,
+            challengeId: challenge.id
+          }
+        },
+        update: {
+          challengeOptionId: option.id,
+          isCorrect: answerSeed.isCorrect,
+          bonusPointsAwarded: answerSeed.bonusPointsAwarded,
+          settledAt: challengeSeed.settledAt,
+          submittedAt: new Date(challengeSeed.lockAt.getTime() - 60 * 60 * 1000)
+        },
+        create: {
+          userId: user.id,
+          challengeId: challenge.id,
+          challengeOptionId: option.id,
+          isCorrect: answerSeed.isCorrect,
+          bonusPointsAwarded: answerSeed.bonusPointsAwarded,
+          settledAt: challengeSeed.settledAt,
+          submittedAt: new Date(challengeSeed.lockAt.getTime() - 60 * 60 * 1000)
+        }
+      });
+    }
+  }
 
   const pickSeeds = [
     {
@@ -405,7 +546,9 @@ async function main() {
     const match = matchByExternalId.get(pickSeed.matchExternalId);
 
     if (!user || !match) {
-      throw new Error(`Seed dependency missing for ${pickSeed.userEmail} / ${pickSeed.matchExternalId}.`);
+      throw new Error(
+        `Seed dependency missing for ${pickSeed.userEmail} / ${pickSeed.matchExternalId}.`
+      );
     }
 
     await prisma.pick.upsert({
@@ -437,29 +580,6 @@ async function main() {
       }
     });
   }
-
-  const frank = userByEmail.get("frank@example.com");
-
-  if (!frank) {
-    throw new Error("Frank seed user is missing.");
-  }
-
-  await prisma.challengeEntry.upsert({
-    where: {
-      userId_statChallengeId: {
-        userId: frank.id,
-        statChallengeId: challenge.id
-      }
-    },
-    update: {
-      prediction: "Argentina vs Uruguay finishes with 12 total corners."
-    },
-    create: {
-      userId: frank.id,
-      statChallengeId: challenge.id,
-      prediction: "Argentina vs Uruguay finishes with 12 total corners."
-    }
-  });
 }
 
 main()

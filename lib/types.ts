@@ -31,6 +31,9 @@ export type StatChallenge = {
   difficulty: "Low" | "Medium" | "High";
   deadline: string;
   joined: boolean;
+  state: "OPEN" | "LOCKED" | "SETTLED";
+  answerLabel?: string | null;
+  options: ChallengeOptionView[];
 };
 
 export type LeaderboardEntry = {
@@ -39,6 +42,7 @@ export type LeaderboardEntry = {
   nation: string;
   streak: number;
   points: number;
+  challengeBonusPoints?: number;
   status: "ALIVE" | "ELIMINATED";
   isCurrentUser?: boolean;
 };
@@ -49,6 +53,12 @@ export type UserProfile = {
   favoriteNation: string;
   bio: string;
   streakGoal: number;
+};
+
+export type ChallengeOptionView = {
+  id: string;
+  label: string;
+  value: string;
 };
 
 export type UsedTeam = {
@@ -66,4 +76,13 @@ export type PickHistoryEntry = {
   kickoff: string;
   outcome: "PENDING" | "WON" | "LOST" | "MISSED";
   pointsAwarded: number;
+};
+
+export type ChallengeHistoryEntry = {
+  id: string;
+  title: string;
+  answer: string;
+  state: "OPEN" | "LOCKED" | "SETTLED";
+  bonusPointsAwarded: number;
+  isCorrect: boolean | null;
 };

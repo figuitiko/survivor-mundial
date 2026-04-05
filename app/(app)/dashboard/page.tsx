@@ -17,18 +17,18 @@ export default async function DashboardPage() {
     {
       label: "Current Streak",
       value: `${data.user.currentStreak}`.padStart(2, "0"),
-      detail: `${getSurvivorStatusLabel(data.user.survivorStatus)} after the latest settled matchday.`
+      detail: `${getSurvivorStatusLabel(data.user.survivorStatus)} after the latest settled matchday.`,
     },
     {
-      label: "Survivor Points",
-      value: `${data.user.survivorPoints}`,
-      detail: "Points are awarded only when a pick survives settlement."
+      label: "Standing Points",
+      value: `${data.totalStandingPoints}`,
+      detail: `${data.user.challengeBonusPoints} bonus points already added from settled challenges.`,
     },
     {
       label: "Pool Alive",
       value: `${data.aliveCount}`,
-      detail: "Entrants still standing in the tournament."
-    }
+      detail: "Entrants still standing in the tournament.",
+    },
   ];
 
   return (
@@ -44,17 +44,28 @@ export default async function DashboardPage() {
         <div className="section-shell rounded-[2.2rem] px-6 py-6 md:px-8 md:py-8">
           <div className="grid gap-6 md:grid-cols-3">
             {dashboardMetrics.map((metric, index) => (
-              <article key={metric.label} className="border-b border-[color:var(--border)] pb-6 last:border-b-0 last:pb-0 md:border-b-0 md:border-r md:pb-0 md:last:border-r-0 md:pr-6">
-                <p className="text-xs uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
+              <article
+                key={metric.label}
+                className="border-b border-(--border) pb-6 last:border-b-0 last:pb-0 md:border-b-0 md:border-r md:pb-0 md:last:border-r-0 md:pr-6"
+              >
+                <p className="text-xs uppercase tracking-[0.24em] text-(--muted-foreground)">
                   {metric.label}
                 </p>
                 <p className="font-display mt-3 text-5xl">{metric.value}</p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--muted-foreground)]">
+                <p className="mt-3 text-sm leading-7 text-(--muted-foreground)">
                   {metric.detail}
                 </p>
                 <div className="mt-5 flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[color:var(--accent)]">
-                  {index === 0 ? <Flame className="size-3.5" /> : index === 1 ? <Medal className="size-3.5" /> : <Goal className="size-3.5" />}
-                  {data.user.survivorStatus === SurvivorStatus.ALIVE ? "Match-ready" : "Needs reset"}
+                  {index === 0 ? (
+                    <Flame className="size-3.5" />
+                  ) : index === 1 ? (
+                    <Medal className="size-3.5" />
+                  ) : (
+                    <Goal className="size-3.5" />
+                  )}
+                  {data.user.survivorStatus === SurvivorStatus.ALIVE
+                    ? "Match-ready"
+                    : "Needs reset"}
                 </div>
               </article>
             ))}
@@ -65,8 +76,10 @@ export default async function DashboardPage() {
           <p className="eyebrow">Featured stat challenge</p>
           <div className="mt-5 flex items-start justify-between gap-4">
             <div>
-              <h2 className="font-display text-3xl">{featuredChallenge.title}</h2>
-              <p className="mt-3 max-w-md text-sm leading-7 text-[color:var(--muted-foreground)]">
+              <h2 className="font-display text-3xl">
+                {featuredChallenge.title}
+              </h2>
+              <p className="mt-3 max-w-md text-sm leading-7 text-(--muted-foreground)">
                 {featuredChallenge.description}
               </p>
             </div>
@@ -74,13 +87,13 @@ export default async function DashboardPage() {
           </div>
           <div className="mt-7 space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-[color:var(--muted-foreground)]">Join rate</span>
+              <span className="text-(--muted-foreground)">Join rate</span>
               <span className="font-semibold">61%</span>
             </div>
             <Progress value={61} />
           </div>
-          <p className="mt-5 text-xs uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
-              {featuredChallenge.deadline}
+          <p className="mt-5 text-xs uppercase tracking-[0.24em] text-(--muted-foreground)">
+            {featuredChallenge.deadline}
           </p>
         </div>
       </section>
@@ -91,35 +104,39 @@ export default async function DashboardPage() {
             <div>
               <p className="eyebrow">Upcoming picks</p>
               <h2 className="font-display mt-4 text-3xl">
-                {data.currentMatchday ? `${data.currentMatchday.title} is open.` : "No open matchday."}
+                {data.currentMatchday
+                  ? `${data.currentMatchday.title} is open.`
+                  : "No open matchday."}
               </h2>
             </div>
-            <ArrowUpRight className="size-5 text-[color:var(--accent)]" />
+            <ArrowUpRight className="size-5 text-(--accent)" />
           </div>
           <div className="mt-7 grid gap-4">
             {data.currentMatchday?.matches.map((match) => (
               <article
                 key={match.id}
-                className="grid gap-4 rounded-[1.8rem] border border-[color:var(--border)] bg-white/70 px-5 py-5 md:grid-cols-[1fr_auto_auto]"
+                className="grid gap-4 rounded-[1.8rem] border border-(--border) bg-white/70 px-5 py-5 md:grid-cols-[1fr_auto_auto]"
               >
                 <div>
-                  <p className="text-xs uppercase tracking-[0.26em] text-[color:var(--muted-foreground)]">
+                  <p className="text-xs uppercase tracking-[0.26em] text-(--muted-foreground)">
                     {data.currentMatchday?.title}
                   </p>
                   <h3 className="font-display mt-2 text-2xl">
                     {match.homeTeam} vs {match.awayTeam}
                   </h3>
-                  <p className="mt-2 text-sm text-[color:var(--muted-foreground)]">
+                  <p className="mt-2 text-sm text-(--muted-foreground)">
                     {match.venue}
                   </p>
                 </div>
                 <div className="text-sm">
-                  <p className="text-[color:var(--muted-foreground)]">Status</p>
+                  <p className="text-(--muted-foreground)">Status</p>
                   <p className="font-semibold">{match.status}</p>
                 </div>
                 <div className="text-sm">
-                  <p className="text-[color:var(--muted-foreground)]">Winner</p>
-                  <p className="font-semibold capitalize">{match.winner ?? "Open"}</p>
+                  <p className="text-(--muted-foreground)">Winner</p>
+                  <p className="font-semibold capitalize">
+                    {match.winner ?? "Open"}
+                  </p>
                 </div>
               </article>
             )) ?? (
@@ -145,16 +162,19 @@ export default async function DashboardPage() {
               {data.leaderboardRows.slice(0, 4).map((entry, index) => (
                 <div
                   key={entry.id}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-[color:var(--border)] pb-4 last:border-b-0"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-(--border) pb-4 last:border-b-0"
                 >
                   <p className="font-display text-3xl">{index + 1}</p>
                   <div>
                     <p className="text-sm font-semibold">{entry.name}</p>
-                    <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
-                      {entry.favoriteNation ?? "N/A"} · streak {entry.currentStreak}
+                    <p className="text-xs uppercase tracking-[0.22em] text-(--muted-foreground)">
+                      {entry.favoriteNation ?? "N/A"} · streak{" "}
+                      {entry.currentStreak}
                     </p>
                   </div>
-                  <p className="text-right text-sm font-semibold">{entry.survivorPoints} pts</p>
+                  <p className="text-right text-sm font-semibold">
+                    {entry.survivorPoints} pts
+                  </p>
                 </div>
               ))}
             </div>
@@ -164,17 +184,19 @@ export default async function DashboardPage() {
                 {data.recentPicks.map((pick) => (
                   <div
                     key={pick.id}
-                    className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-[color:var(--border)] bg-white/60 px-4 py-3"
+                    className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-(--border) bg-white/60 px-4 py-3"
                   >
                     <div>
                       <p className="text-sm font-semibold">
                         {pick.selectedTeam} over {pick.opponent}
                       </p>
-                      <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted-foreground)]">
+                      <p className="text-xs uppercase tracking-[0.22em] text-(--muted-foreground)">
                         {pick.matchday}
                       </p>
                     </div>
-                    <Badge variant={pick.outcome === "WON" ? "success" : "default"}>
+                    <Badge
+                      variant={pick.outcome === "WON" ? "success" : "default"}
+                    >
                       {pick.outcome}
                     </Badge>
                   </div>

@@ -31,6 +31,20 @@ enum ChallengeDifficulty {
   HIGH
 }
 
+enum ChallengeType {
+  BOTH_TEAMS_SCORE
+  OVER_25_GOALS
+  RED_CARD_YES_NO
+  MATCH_WITH_MOST_GOALS
+  UNDERDOG_AVOIDS_DEFEAT
+}
+
+enum ChallengeState {
+  OPEN
+  LOCKED
+  SETTLED
+}
+
 model User {
   id                 String             @id @default(cuid())
   email              String             @unique
@@ -40,6 +54,7 @@ model User {
   bio                String?
   streakGoal         Int                @default(10)
   survivorPoints     Int                @default(0)
+  challengeBonusPoints Int              @default(0)
   currentStreak      Int                @default(0)
   longestStreak      Int                @default(0)
   survivorStatus     SurvivorStatus     @default(ALIVE)
@@ -47,7 +62,7 @@ model User {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   picks              Pick[]
-  challengeEntries   ChallengeEntry[]
+  challengeAnswers   ChallengeAnswer[]
 }
 
 model Matchday {
@@ -61,7 +76,7 @@ model Matchday {
   updatedAt   DateTime @updatedAt
   matches     Match[]
   picks       Pick[]
-  challenges  StatChallenge[]
+  challenges  Challenge[]
 }
 
 model Match {
@@ -78,6 +93,7 @@ model Match {
   updatedAt       DateTime    @updatedAt
   matchday        Matchday    @relation(fields: [matchdayId], references: [id], onDelete: Cascade)
   picks           Pick[]
+  challenges      Challenge[]
 }
 
 model Pick {
@@ -101,31 +117,56 @@ model Pick {
   @@index([userId, selectedTeam])
 }
 
-model StatChallenge {
-  id            String               @id @default(cuid())
-  matchdayId    String
-  slug          String               @unique
-  title         String
-  description   String
-  rewardPoints  Int
-  difficulty    ChallengeDifficulty
-  closesAt      DateTime
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  matchday      Matchday             @relation(fields: [matchdayId], references: [id], onDelete: Cascade)
-  entries       ChallengeEntry[]
+model Challenge {
+  id              String              @id @default(cuid())
+  matchdayId       String
+  matchId          String?
+  slug             String              @unique
+  title            String
+  description      String
+  type             ChallengeType
+  difficulty       ChallengeDifficulty
+  state            ChallengeState      @default(OPEN)
+  bonusPoints      Int
+  lockAt           DateTime
+  settledAt        DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  matchday         Matchday            @relation(fields: [matchdayId], references: [id], onDelete: Cascade)
+  match            Match?              @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  options          ChallengeOption[]
+  answers          ChallengeAnswer[]
 }
 
-model ChallengeEntry {
-  id              String        @id @default(cuid())
-  userId          String
-  statChallengeId String
-  prediction      String
-  pointsAwarded   Int           @default(0)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  statChallenge   StatChallenge @relation(fields: [statChallengeId], references: [id], onDelete: Cascade)
+model ChallengeOption {
+  id              String          @id @default(cuid())
+  challengeId     String
+  label           String
+  value           String
+  sortOrder       Int             @default(0)
+  isCorrect       Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  challenge       Challenge       @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  answers         ChallengeAnswer[]
 
-  @@unique([userId, statChallengeId])
+  @@unique([challengeId, value])
+}
+
+model ChallengeAnswer {
+  id                String           @id @default(cuid())
+  challengeId       String
+  challengeOptionId String
+  userId            String
+  bonusPointsAwarded Int             @default(0)
+  isCorrect         Boolean?
+  submittedAt       DateTime         @default(now())
+  settledAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  challenge         Challenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  challengeOption   ChallengeOption  @relation(fields: [challengeOptionId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
 }

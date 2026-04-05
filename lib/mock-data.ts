@@ -73,7 +73,13 @@ export const statChallenges: StatChallenge[] = [
     reward: "+120 challenge points",
     difficulty: "Medium",
     deadline: "Closes in 9h",
-    joined: true
+    joined: true,
+    state: "OPEN",
+    answerLabel: "Argentina vs Uruguay",
+    options: [
+      { id: "1", label: "Argentina vs Uruguay", value: "arg-uru" },
+      { id: "2", label: "France vs Portugal", value: "fra-por" }
+    ]
   },
   {
     id: "captain-clutch",
@@ -82,7 +88,13 @@ export const statChallenges: StatChallenge[] = [
     reward: "+180 challenge points",
     difficulty: "High",
     deadline: "Closes in 12h",
-    joined: false
+    joined: false,
+    state: "OPEN",
+    answerLabel: null,
+    options: [
+      { id: "3", label: "Yes", value: "yes" },
+      { id: "4", label: "No", value: "no" }
+    ]
   },
   {
     id: "clean-sheet-grid",
@@ -91,7 +103,13 @@ export const statChallenges: StatChallenge[] = [
     reward: "+90 challenge points",
     difficulty: "Low",
     deadline: "Closes in 1d",
-    joined: false
+    joined: false,
+    state: "LOCKED",
+    answerLabel: null,
+    options: [
+      { id: "5", label: "Yes", value: "yes" },
+      { id: "6", label: "No", value: "no" }
+    ]
   }
 ];
 

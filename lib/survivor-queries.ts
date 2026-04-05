@@ -90,18 +90,9 @@ export async function getDashboardData() {
   const user = await getCurrentUserOrThrow();
   const currentMatchday = await getCurrentMatchday();
 
-  const [aliveCount, leaderboardRows, recentPicks] = await Promise.all([
+  const [aliveCount, leaderboardRowsRaw, recentPicks] = await Promise.all([
     prisma.user.count({ where: { survivorStatus: SurvivorStatus.ALIVE } }),
-    prisma.user.findMany({
-      orderBy: [
-        { survivorStatus: "asc" },
-        { currentStreak: "desc" },
-        { survivorPoints: "desc" },
-        { longestStreak: "desc" },
-        { name: "asc" }
-      ],
-      take: 5
-    }),
+    prisma.user.findMany(),
     prisma.pick.findMany({
       where: { userId: user.id },
       orderBy: [{ matchday: { order: "desc" } }],
@@ -113,8 +104,34 @@ export async function getDashboardData() {
     })
   ]);
 
+  const leaderboardRows = leaderboardRowsRaw
+    .sort((left, right) => {
+      if (left.survivorStatus !== right.survivorStatus) {
+        return left.survivorStatus === SurvivorStatus.ALIVE ? -1 : 1;
+      }
+
+      if (left.currentStreak !== right.currentStreak) {
+        return right.currentStreak - left.currentStreak;
+      }
+
+      const leftTotal = left.survivorPoints + left.challengeBonusPoints;
+      const rightTotal = right.survivorPoints + right.challengeBonusPoints;
+
+      if (leftTotal !== rightTotal) {
+        return rightTotal - leftTotal;
+      }
+
+      if (left.longestStreak !== right.longestStreak) {
+        return right.longestStreak - left.longestStreak;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .slice(0, 5);
+
   return {
     user,
+    totalStandingPoints: user.survivorPoints + user.challengeBonusPoints,
     currentMatchday,
     aliveCount,
     leaderboardRows,
@@ -134,23 +151,39 @@ export async function getDashboardData() {
 export async function getLeaderboardData() {
   const [user, rows] = await Promise.all([
     getCurrentUserOrThrow(),
-    prisma.user.findMany({
-      orderBy: [
-        { survivorStatus: "asc" },
-        { currentStreak: "desc" },
-        { survivorPoints: "desc" },
-        { longestStreak: "desc" },
-        { name: "asc" }
-      ]
-    })
+    prisma.user.findMany()
   ]);
 
-  return rows.map((row, index) => ({
+  const sortedRows = rows.sort((left, right) => {
+    if (left.survivorStatus !== right.survivorStatus) {
+      return left.survivorStatus === SurvivorStatus.ALIVE ? -1 : 1;
+    }
+
+    if (left.currentStreak !== right.currentStreak) {
+      return right.currentStreak - left.currentStreak;
+    }
+
+    const leftTotal = left.survivorPoints + left.challengeBonusPoints;
+    const rightTotal = right.survivorPoints + right.challengeBonusPoints;
+
+    if (leftTotal !== rightTotal) {
+      return rightTotal - leftTotal;
+    }
+
+    if (left.longestStreak !== right.longestStreak) {
+      return right.longestStreak - left.longestStreak;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+  return sortedRows.map((row, index) => ({
     rank: index + 1,
     player: row.name,
     nation: row.favoriteNation ?? "N/A",
     streak: row.currentStreak,
-    points: row.survivorPoints,
+    points: row.survivorPoints + row.challengeBonusPoints,
+    challengeBonusPoints: row.challengeBonusPoints,
     status: row.survivorStatus,
     isCurrentUser: row.id === user.id
   }));

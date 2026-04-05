@@ -1,6 +1,6 @@
 # Survivor Mundial
 
-Phase 2 survivor MVP with a real Prisma-backed survivor core plus stat-challenge scaffolding, built with Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI primitives, Prisma, and PostgreSQL.
+Phase 3 survivor MVP with a real Prisma-backed survivor core and stat challenges, built with Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI primitives, Prisma, and PostgreSQL.
 
 ## Stack
 
@@ -17,7 +17,7 @@ Phase 2 survivor MVP with a real Prisma-backed survivor core plus stat-challenge
 - `/` landing page
 - `/dashboard` protected app dashboard
 - `/picks` matchday survivor pick flow with used-team and history views
-- `/challenges` stat challenge flow
+- `/challenges` stat challenge creation and answer flow
 - `/leaderboard` survivor standings
 - `/profile` player settings
 
@@ -51,12 +51,16 @@ components/
   picks/pick-form.tsx
   picks/used-teams.tsx
   challenges/challenge-join-form.tsx
+  challenges/challenge-create-form.tsx
   profile/profile-form.tsx
   ui/
 lib/
   auth.ts
   mock-data.ts
   prisma.ts
+  challenge-queries.ts
+  challenge-settlement.ts
+  challenges.ts
   survivor.ts
   survivor-queries.ts
   survivor-settlement.ts
@@ -102,8 +106,9 @@ The Prisma schema now models:
 - `Matchday`
 - `Match`
 - `Pick`
-- `StatChallenge`
-- `ChallengeEntry`
+- `Challenge`
+- `ChallengeOption`
+- `ChallengeAnswer`
 
 The survivor-specific rules now live server-side:
 
@@ -113,9 +118,17 @@ The survivor-specific rules now live server-side:
 - settlement updates pick outcomes and alive/eliminated status
 - dashboard and leaderboard derive from persisted Prisma state
 
+The stat challenge rules also live server-side:
+
+- challenge creation with typed options
+- one answer per challenge per user
+- no submissions after lock
+- settlement marks the correct option and awards bonus points
+- leaderboard totals include `survivorPoints + challengeBonusPoints`
+
 ## Notes
 
 - Prisma 7 is configured with `prisma.config.ts`, the `prisma-client` generator, and `@prisma/adapter-pg`.
 - App routes are protected through a mock session helper in `lib/auth.ts`.
 - Survivor pick rules live in `app/(app)/picks/actions.ts` and `lib/survivor-settlement.ts`.
-- The challenge flow still uses placeholder app data in `lib/mock-data.ts`.
+- Stat challenge rules live in `app/(app)/challenges/actions.ts` and `lib/challenge-settlement.ts`.
