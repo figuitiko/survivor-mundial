@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getRequiredSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { profileSchema, type ProfileInput } from "@/lib/validations/profile";
 
 type ProfileActionState = {
@@ -21,10 +23,25 @@ export async function updateProfile(
     };
   }
 
+  const session = await getRequiredSession();
+
+  await prisma.user.update({
+    where: { email: session.user.email },
+    data: {
+      name: parsed.data.name,
+      username: parsed.data.username,
+      favoriteNation: parsed.data.favoriteNation,
+      bio: parsed.data.bio,
+      streakGoal: parsed.data.streakGoal
+    }
+  });
+
   revalidatePath("/profile");
+  revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
 
   return {
     status: "success",
-    message: `Saved profile draft for ${parsed.data.username}.`
+    message: `Saved profile for ${parsed.data.username}.`
   };
 }

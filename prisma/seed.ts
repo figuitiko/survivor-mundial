@@ -11,6 +11,11 @@ import {
   PrismaClient,
   SurvivorStatus
 } from "../generated/prisma/client";
+import {
+  awardBadgesForUser,
+  ensureBadgeCatalog,
+  recalculateUserStats
+} from "../lib/gamification";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -579,6 +584,13 @@ async function main() {
         settledAt: pickSeed.settledAt
       }
     });
+  }
+
+  await ensureBadgeCatalog(prisma);
+
+  for (const user of users) {
+    await recalculateUserStats(prisma, user.id);
+    await awardBadgesForUser(prisma, user.id);
   }
 }
 

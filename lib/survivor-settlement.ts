@@ -1,4 +1,5 @@
 import { PickOutcome, SurvivorStatus } from "@/generated/prisma/enums";
+import { awardBadgesForUser, recalculateUserStats } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
 import { SURVIVOR_MATCHDAY_POINTS } from "@/lib/survivor";
 
@@ -45,9 +46,11 @@ export async function settleMatchday(matchdayId: string) {
     const settledAt = new Date();
     let advanced = 0;
     let eliminated = 0;
+    const impactedUserIds = new Set<string>();
 
     for (const user of aliveUsers) {
       const pick = picksByUser.get(user.id);
+      impactedUserIds.add(user.id);
 
       if (!pick) {
         await tx.user.update({
@@ -74,12 +77,9 @@ export async function settleMatchday(matchdayId: string) {
       });
 
       if (won) {
-        const nextStreak = user.currentStreak + 1;
         await tx.user.update({
           where: { id: user.id },
           data: {
-            currentStreak: nextStreak,
-            longestStreak: Math.max(user.longestStreak, nextStreak),
             survivorPoints: user.survivorPoints + SURVIVOR_MATCHDAY_POINTS
           }
         });
@@ -101,6 +101,11 @@ export async function settleMatchday(matchdayId: string) {
       where: { id: matchday.id },
       data: { settledAt }
     });
+
+    for (const userId of impactedUserIds) {
+      await recalculateUserStats(tx, userId);
+      await awardBadgesForUser(tx, userId);
+    }
 
     return {
       matchdayId: matchday.id,

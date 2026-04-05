@@ -1,7 +1,8 @@
-import { SurvivorStatus } from "@/generated/prisma/enums";
+import { ChallengeState, SurvivorStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { formatKickoff } from "@/lib/survivor";
 import { getRequiredSession } from "@/lib/auth";
+import { formatChallengeDifficulty, getChallengeState } from "@/lib/challenges";
 
 export async function getCurrentUserOrThrow() {
   const session = await getRequiredSession();
@@ -90,19 +91,49 @@ export async function getDashboardData() {
   const user = await getCurrentUserOrThrow();
   const currentMatchday = await getCurrentMatchday();
 
-  const [aliveCount, leaderboardRowsRaw, recentPicks] = await Promise.all([
-    prisma.user.count({ where: { survivorStatus: SurvivorStatus.ALIVE } }),
-    prisma.user.findMany(),
-    prisma.pick.findMany({
-      where: { userId: user.id },
-      orderBy: [{ matchday: { order: "desc" } }],
-      take: 4,
-      include: {
-        match: true,
-        matchday: true
-      }
-    })
-  ]);
+  const [aliveCount, leaderboardRowsRaw, recentPicks, userStats, recentBadges, featuredChallenge] =
+    await Promise.all([
+      prisma.user.count({ where: { survivorStatus: SurvivorStatus.ALIVE } }),
+      prisma.user.findMany({
+        include: {
+          stats: true
+        }
+      }),
+      prisma.pick.findMany({
+        where: { userId: user.id },
+        orderBy: [{ matchday: { order: "desc" } }],
+        take: 4,
+        include: {
+          match: true,
+          matchday: true
+        }
+      }),
+      prisma.userStats.findUnique({
+        where: { userId: user.id }
+      }),
+      prisma.userBadge.findMany({
+        where: { userId: user.id },
+        include: { badge: true },
+        orderBy: { awardedAt: "desc" },
+        take: 3
+      }),
+      prisma.challenge.findFirst({
+        where: { settledAt: null },
+        orderBy: [{ matchday: { order: "asc" } }, { lockAt: "asc" }],
+        include: {
+          options: {
+            orderBy: { sortOrder: "asc" }
+          },
+          answers: {
+            where: { userId: user.id },
+            include: { challengeOption: true }
+          },
+          _count: {
+            select: { answers: true }
+          }
+        }
+      })
+    ]);
 
   const leaderboardRows = leaderboardRowsRaw
     .sort((left, right) => {
@@ -132,9 +163,37 @@ export async function getDashboardData() {
   return {
     user,
     totalStandingPoints: user.survivorPoints + user.challengeBonusPoints,
+    userStats,
     currentMatchday,
     aliveCount,
     leaderboardRows,
+    featuredChallenge: featuredChallenge
+      ? {
+          id: featuredChallenge.id,
+          title: featuredChallenge.title,
+          description: featuredChallenge.description,
+          reward: `+${featuredChallenge.bonusPoints} bonus points`,
+          difficulty: formatChallengeDifficulty(featuredChallenge.difficulty),
+          deadline: formatKickoff(featuredChallenge.lockAt),
+          joined: Boolean(featuredChallenge.answers[0]),
+          state: (
+            featuredChallenge.state === ChallengeState.SETTLED
+              ? featuredChallenge.state
+              : getChallengeState(featuredChallenge.lockAt, featuredChallenge.settledAt)
+          ) as "OPEN" | "LOCKED" | "SETTLED",
+          answerLabel: featuredChallenge.answers[0]?.challengeOption.label ?? null,
+          joinCount: featuredChallenge._count.answers
+        }
+      : null,
+    recentBadges: recentBadges.map((userBadge) => ({
+      id: userBadge.id,
+      slug: userBadge.badge.slug,
+      title: userBadge.badge.title,
+      description: userBadge.badge.description,
+      icon: userBadge.badge.icon,
+      category: userBadge.badge.category,
+      awardedAt: userBadge.awardedAt.toISOString()
+    })),
     recentPicks: recentPicks.map((pick) => ({
       id: pick.id,
       matchday: pick.matchday.title,
@@ -151,7 +210,11 @@ export async function getDashboardData() {
 export async function getLeaderboardData() {
   const [user, rows] = await Promise.all([
     getCurrentUserOrThrow(),
-    prisma.user.findMany()
+    prisma.user.findMany({
+      include: {
+        stats: true
+      }
+    })
   ]);
 
   const sortedRows = rows.sort((left, right) => {
@@ -184,6 +247,9 @@ export async function getLeaderboardData() {
     streak: row.currentStreak,
     points: row.survivorPoints + row.challengeBonusPoints,
     challengeBonusPoints: row.challengeBonusPoints,
+    challengeStreak: row.stats?.currentChallengeStreak ?? 0,
+    badgesUnlocked: row.stats?.badgesUnlocked ?? 0,
+    longestStreak: row.stats?.longestSurvivalStreak ?? row.longestStreak,
     status: row.survivorStatus,
     isCurrentUser: row.id === user.id
   }));
@@ -204,6 +270,58 @@ export async function getSurvivorStandingsSnapshot() {
     totalPlayers: users.length,
     alivePlayers: users.filter((user) => user.survivorStatus === SurvivorStatus.ALIVE).length,
     users
+  };
+}
+
+export async function getProfileData() {
+  const user = await getCurrentUserOrThrow();
+
+  const [stats, badges] = await Promise.all([
+    prisma.userStats.findUnique({
+      where: { userId: user.id }
+    }),
+    prisma.userBadge.findMany({
+      where: { userId: user.id },
+      include: { badge: true },
+      orderBy: { awardedAt: "desc" }
+    })
+  ]);
+
+  return {
+    profile: {
+      name: user.name,
+      username: user.username,
+      favoriteNation: user.favoriteNation ?? "",
+      bio: user.bio ?? "",
+      streakGoal: user.streakGoal
+    },
+    user,
+    stats: stats
+      ? {
+          totalPicks: stats.totalPicks,
+          settledPicks: stats.settledPicks,
+          survivorWins: stats.survivorWins,
+          survivorLosses: stats.survivorLosses,
+          totalChallengeAnswers: stats.totalChallengeAnswers,
+          correctChallengeAnswers: stats.correctChallengeAnswers,
+          currentSurvivalStreak: stats.currentSurvivalStreak,
+          longestSurvivalStreak: stats.longestSurvivalStreak,
+          currentChallengeStreak: stats.currentChallengeStreak,
+          longestChallengeStreak: stats.longestChallengeStreak,
+          totalPoints: stats.totalPoints,
+          totalBonusPoints: stats.totalBonusPoints,
+          badgesUnlocked: stats.badgesUnlocked
+        }
+      : null,
+    badges: badges.map((userBadge) => ({
+      id: userBadge.id,
+      slug: userBadge.badge.slug,
+      title: userBadge.badge.title,
+      description: userBadge.badge.description,
+      icon: userBadge.badge.icon,
+      category: userBadge.badge.category,
+      awardedAt: userBadge.awardedAt.toISOString()
+    }))
   };
 }
 

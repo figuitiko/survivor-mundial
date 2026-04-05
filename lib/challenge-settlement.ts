@@ -1,4 +1,5 @@
 import { ChallengeState } from "@/generated/prisma/enums";
+import { awardBadgesForUser, recalculateUserStats } from "@/lib/gamification";
 import { prisma } from "@/lib/prisma";
 
 export async function settleChallenge(challengeId: string, correctOptionId: string) {
@@ -26,6 +27,7 @@ export async function settleChallenge(challengeId: string, correctOptionId: stri
     }
 
     const settledAt = new Date();
+    const impactedUserIds = new Set<string>();
 
     await tx.challengeOption.updateMany({
       where: { challengeId: challenge.id },
@@ -38,6 +40,7 @@ export async function settleChallenge(challengeId: string, correctOptionId: stri
     });
 
     for (const answer of challenge.answers) {
+      impactedUserIds.add(answer.userId);
       const isCorrect = answer.challengeOptionId === correctOption.id;
       const bonusPointsAwarded = isCorrect ? challenge.bonusPoints : 0;
 
@@ -69,6 +72,11 @@ export async function settleChallenge(challengeId: string, correctOptionId: stri
         settledAt
       }
     });
+
+    for (const userId of impactedUserIds) {
+      await recalculateUserStats(tx, userId);
+      await awardBadgesForUser(tx, userId);
+    }
 
     return {
       challengeId: challenge.id,

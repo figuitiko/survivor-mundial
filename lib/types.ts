@@ -10,6 +10,13 @@ export type DashboardMetric = {
   detail: string;
 };
 
+export type StreakCard = {
+  title: string;
+  current: number;
+  longest: number;
+  detail: string;
+};
+
 export type MatchCard = {
   id: string;
   homeTeam: string;
@@ -43,6 +50,9 @@ export type LeaderboardEntry = {
   streak: number;
   points: number;
   challengeBonusPoints?: number;
+  challengeStreak?: number;
+  badgesUnlocked?: number;
+  longestStreak?: number;
   status: "ALIVE" | "ELIMINATED";
   isCurrentUser?: boolean;
 };
@@ -53,6 +63,32 @@ export type UserProfile = {
   favoriteNation: string;
   bio: string;
   streakGoal: number;
+};
+
+export type Achievement = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  icon: string;
+  category: "SURVIVAL" | "CHALLENGE" | "MILESTONE";
+  awardedAt: string;
+};
+
+export type UserStatsView = {
+  totalPicks: number;
+  settledPicks: number;
+  survivorWins: number;
+  survivorLosses: number;
+  totalChallengeAnswers: number;
+  correctChallengeAnswers: number;
+  currentSurvivalStreak: number;
+  longestSurvivalStreak: number;
+  currentChallengeStreak: number;
+  longestChallengeStreak: number;
+  totalPoints: number;
+  totalBonusPoints: number;
+  badgesUnlocked: number;
 };
 
 export type ChallengeOptionView = {

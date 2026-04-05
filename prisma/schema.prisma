@@ -45,6 +45,12 @@ enum ChallengeState {
   SETTLED
 }
 
+enum BadgeCategory {
+  SURVIVAL
+  CHALLENGE
+  MILESTONE
+}
+
 model User {
   id                 String             @id @default(cuid())
   email              String             @unique
@@ -63,6 +69,8 @@ model User {
   updatedAt          DateTime           @updatedAt
   picks              Pick[]
   challengeAnswers   ChallengeAnswer[]
+  badges             UserBadge[]
+  stats              UserStats?
 }
 
 model Matchday {
@@ -169,4 +177,49 @@ model ChallengeAnswer {
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, challengeId])
+}
+
+model Badge {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  description   String
+  icon          String
+  category      BadgeCategory
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  userBadges    UserBadge[]
+}
+
+model UserBadge {
+  id            String      @id @default(cuid())
+  userId        String
+  badgeId       String
+  awardedAt     DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge         Badge       @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model UserStats {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  totalPicks             Int      @default(0)
+  settledPicks           Int      @default(0)
+  survivorWins           Int      @default(0)
+  survivorLosses         Int      @default(0)
+  totalChallengeAnswers  Int      @default(0)
+  correctChallengeAnswers Int     @default(0)
+  currentSurvivalStreak  Int      @default(0)
+  longestSurvivalStreak  Int      @default(0)
+  currentChallengeStreak Int      @default(0)
+  longestChallengeStreak Int      @default(0)
+  totalPoints            Int      @default(0)
+  totalBonusPoints       Int      @default(0)
+  badgesUnlocked         Int      @default(0)
+  updatedAt              DateTime @updatedAt
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
