@@ -3,6 +3,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import {
+  UserRole,
   ChallengeDifficulty,
   ChallengeState,
   ChallengeType,
@@ -31,6 +32,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: "camila@example.com" },
       update: {
+        role: UserRole.USER,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         survivorPoints: 200,
         challengeBonusPoints: 40,
         currentStreak: 2,
@@ -40,6 +43,8 @@ async function main() {
       create: {
         email: "camila@example.com",
         name: "Camila Reyes",
+        role: UserRole.USER,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         username: "camila",
         favoriteNation: "Mexico",
         bio: "Trusts tempo, travel, and midfield control.",
@@ -54,6 +59,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: "iker@example.com" },
       update: {
+        role: UserRole.USER,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         survivorPoints: 200,
         challengeBonusPoints: 20,
         currentStreak: 2,
@@ -63,6 +70,8 @@ async function main() {
       create: {
         email: "iker@example.com",
         name: "Iker Torres",
+        role: UserRole.USER,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         username: "iker",
         favoriteNation: "Spain",
         bio: "Chases compact defenses and matchup geometry.",
@@ -77,6 +86,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: "frank@example.com" },
       update: {
+        role: UserRole.ADMIN,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         survivorPoints: 200,
         challengeBonusPoints: 40,
         currentStreak: 2,
@@ -86,6 +97,8 @@ async function main() {
       create: {
         email: "frank@example.com",
         name: "Frank Ortega",
+        role: UserRole.ADMIN,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         username: "frankplayssurvivor",
         favoriteNation: "Mexico",
         bio: "Tracking survivor edges through venue splits, tempo, and squad rotation.",
@@ -100,6 +113,8 @@ async function main() {
     prisma.user.upsert({
       where: { email: "mara@example.com" },
       update: {
+        role: UserRole.USER,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         survivorPoints: 100,
         challengeBonusPoints: 0,
         currentStreak: 0,
@@ -110,6 +125,8 @@ async function main() {
       create: {
         email: "mara@example.com",
         name: "Mara Vega",
+        role: UserRole.USER,
+        emailVerified: new Date("2026-06-01T00:00:00.000Z"),
         username: "mara",
         favoriteNation: "Argentina",
         bio: "Leans on shot quality and defensive transitions.",
@@ -321,105 +338,109 @@ async function main() {
   ];
 
   for (const challengeSeed of challengeSeeds) {
-    const challenge = await prisma.challenge.upsert({
-      where: { slug: challengeSeed.slug },
-      update: {
-        matchdayId: challengeSeed.matchdayId,
-        matchId: challengeSeed.matchId,
-        title: challengeSeed.title,
-        description: challengeSeed.description,
-        type: challengeSeed.type,
-        difficulty: challengeSeed.difficulty,
-        bonusPoints: challengeSeed.bonusPoints,
-        lockAt: challengeSeed.lockAt,
-        state: challengeSeed.state,
-        settledAt: challengeSeed.settledAt
-      },
-      create: {
-        slug: challengeSeed.slug,
-        matchdayId: challengeSeed.matchdayId,
-        matchId: challengeSeed.matchId,
-        title: challengeSeed.title,
-        description: challengeSeed.description,
-        type: challengeSeed.type,
-        difficulty: challengeSeed.difficulty,
-        bonusPoints: challengeSeed.bonusPoints,
-        lockAt: challengeSeed.lockAt,
-        state: challengeSeed.state,
-        settledAt: challengeSeed.settledAt
-      }
-    });
-
-    const existingOptions = await prisma.challengeOption.findMany({
-      where: { challengeId: challenge.id }
-    });
-
-    const optionsByValue = new Map(existingOptions.map((option) => [option.value, option]));
-
-    for (const optionSeed of challengeSeed.options) {
-      const option = optionsByValue.get(optionSeed.value);
-
-      if (option) {
-        await prisma.challengeOption.update({
-          where: { id: option.id },
-          data: {
-            label: optionSeed.label,
-            sortOrder: optionSeed.sortOrder,
-            isCorrect: optionSeed.isCorrect
-          }
-        });
-      } else {
-        await prisma.challengeOption.create({
-          data: {
-            challengeId: challenge.id,
-            label: optionSeed.label,
-            value: optionSeed.value,
-            sortOrder: optionSeed.sortOrder,
-            isCorrect: optionSeed.isCorrect
-          }
-        });
-      }
-    }
-
-    const refreshedOptions = await prisma.challengeOption.findMany({
-      where: { challengeId: challenge.id }
-    });
-
-    const optionByValue = new Map(refreshedOptions.map((option) => [option.value, option]));
-
-    for (const answerSeed of challengeSeed.answers) {
-      const user = userByEmail.get(answerSeed.userEmail);
-      const option = optionByValue.get(answerSeed.value);
-
-      if (!user || !option) {
-        throw new Error(`Challenge seed dependency missing for ${answerSeed.userEmail} / ${answerSeed.value}.`);
-      }
-
-      await prisma.challengeAnswer.upsert({
-        where: {
-          userId_challengeId: {
-            userId: user.id,
-            challengeId: challenge.id
-          }
-        },
+    await prisma.$transaction(async (tx) => {
+      const challenge = await tx.challenge.upsert({
+        where: { slug: challengeSeed.slug },
         update: {
-          challengeOptionId: option.id,
-          isCorrect: answerSeed.isCorrect,
-          bonusPointsAwarded: answerSeed.bonusPointsAwarded,
-          settledAt: challengeSeed.settledAt,
-          submittedAt: new Date(challengeSeed.lockAt.getTime() - 60 * 60 * 1000)
+          matchdayId: challengeSeed.matchdayId,
+          matchId: challengeSeed.matchId,
+          title: challengeSeed.title,
+          description: challengeSeed.description,
+          type: challengeSeed.type,
+          difficulty: challengeSeed.difficulty,
+          bonusPoints: challengeSeed.bonusPoints,
+          lockAt: challengeSeed.lockAt,
+          state: challengeSeed.state,
+          settledAt: challengeSeed.settledAt
         },
         create: {
-          userId: user.id,
-          challengeId: challenge.id,
-          challengeOptionId: option.id,
-          isCorrect: answerSeed.isCorrect,
-          bonusPointsAwarded: answerSeed.bonusPointsAwarded,
-          settledAt: challengeSeed.settledAt,
-          submittedAt: new Date(challengeSeed.lockAt.getTime() - 60 * 60 * 1000)
+          slug: challengeSeed.slug,
+          matchdayId: challengeSeed.matchdayId,
+          matchId: challengeSeed.matchId,
+          title: challengeSeed.title,
+          description: challengeSeed.description,
+          type: challengeSeed.type,
+          difficulty: challengeSeed.difficulty,
+          bonusPoints: challengeSeed.bonusPoints,
+          lockAt: challengeSeed.lockAt,
+          state: challengeSeed.state,
+          settledAt: challengeSeed.settledAt
         }
       });
-    }
+
+      const existingOptions = await tx.challengeOption.findMany({
+        where: { challengeId: challenge.id }
+      });
+
+      const optionsByValue = new Map(existingOptions.map((option) => [option.value, option]));
+
+      for (const optionSeed of challengeSeed.options) {
+        const option = optionsByValue.get(optionSeed.value);
+
+        if (option) {
+          await tx.challengeOption.update({
+            where: { id: option.id },
+            data: {
+              label: optionSeed.label,
+              sortOrder: optionSeed.sortOrder,
+              isCorrect: optionSeed.isCorrect
+            }
+          });
+        } else {
+          await tx.challengeOption.create({
+            data: {
+              challengeId: challenge.id,
+              label: optionSeed.label,
+              value: optionSeed.value,
+              sortOrder: optionSeed.sortOrder,
+              isCorrect: optionSeed.isCorrect
+            }
+          });
+        }
+      }
+
+      const refreshedOptions = await tx.challengeOption.findMany({
+        where: { challengeId: challenge.id }
+      });
+
+      const optionByValue = new Map(refreshedOptions.map((option) => [option.value, option]));
+
+      for (const answerSeed of challengeSeed.answers) {
+        const user = userByEmail.get(answerSeed.userEmail);
+        const option = optionByValue.get(answerSeed.value);
+
+        if (!user || !option) {
+          throw new Error(
+            `Challenge seed dependency missing for ${answerSeed.userEmail} / ${answerSeed.value}.`
+          );
+        }
+
+        await tx.challengeAnswer.upsert({
+          where: {
+            userId_challengeId: {
+              userId: user.id,
+              challengeId: challenge.id
+            }
+          },
+          update: {
+            challengeOptionId: option.id,
+            isCorrect: answerSeed.isCorrect,
+            bonusPointsAwarded: answerSeed.bonusPointsAwarded,
+            settledAt: challengeSeed.settledAt,
+            submittedAt: new Date(challengeSeed.lockAt.getTime() - 60 * 60 * 1000)
+          },
+          create: {
+            userId: user.id,
+            challengeId: challenge.id,
+            challengeOptionId: option.id,
+            isCorrect: answerSeed.isCorrect,
+            bonusPointsAwarded: answerSeed.bonusPointsAwarded,
+            settledAt: challengeSeed.settledAt,
+            submittedAt: new Date(challengeSeed.lockAt.getTime() - 60 * 60 * 1000)
+          }
+        });
+      }
+    });
   }
 
   const pickSeeds = [
@@ -546,52 +567,54 @@ async function main() {
     }
   ];
 
-  for (const pickSeed of pickSeeds) {
-    const user = userByEmail.get(pickSeed.userEmail);
-    const match = matchByExternalId.get(pickSeed.matchExternalId);
+  await prisma.$transaction(async (tx) => {
+    for (const pickSeed of pickSeeds) {
+      const user = userByEmail.get(pickSeed.userEmail);
+      const match = matchByExternalId.get(pickSeed.matchExternalId);
 
-    if (!user || !match) {
-      throw new Error(
-        `Seed dependency missing for ${pickSeed.userEmail} / ${pickSeed.matchExternalId}.`
-      );
+      if (!user || !match) {
+        throw new Error(
+          `Seed dependency missing for ${pickSeed.userEmail} / ${pickSeed.matchExternalId}.`
+        );
+      }
+
+      await tx.pick.upsert({
+        where: {
+          userId_matchdayId: {
+            userId: user.id,
+            matchdayId: pickSeed.matchday.id
+          }
+        },
+        update: {
+          matchId: match.id,
+          selectedTeam: pickSeed.selectedTeam,
+          confidence: pickSeed.confidence,
+          lockedAt: pickSeed.lockedAt,
+          outcome: pickSeed.outcome,
+          pointsAwarded: pickSeed.pointsAwarded,
+          settledAt: pickSeed.settledAt
+        },
+        create: {
+          userId: user.id,
+          matchId: match.id,
+          matchdayId: pickSeed.matchday.id,
+          selectedTeam: pickSeed.selectedTeam,
+          confidence: pickSeed.confidence,
+          lockedAt: pickSeed.lockedAt,
+          outcome: pickSeed.outcome,
+          pointsAwarded: pickSeed.pointsAwarded,
+          settledAt: pickSeed.settledAt
+        }
+      });
     }
 
-    await prisma.pick.upsert({
-      where: {
-        userId_matchdayId: {
-          userId: user.id,
-          matchdayId: pickSeed.matchday.id
-        }
-      },
-      update: {
-        matchId: match.id,
-        selectedTeam: pickSeed.selectedTeam,
-        confidence: pickSeed.confidence,
-        lockedAt: pickSeed.lockedAt,
-        outcome: pickSeed.outcome,
-        pointsAwarded: pickSeed.pointsAwarded,
-        settledAt: pickSeed.settledAt
-      },
-      create: {
-        userId: user.id,
-        matchId: match.id,
-        matchdayId: pickSeed.matchday.id,
-        selectedTeam: pickSeed.selectedTeam,
-        confidence: pickSeed.confidence,
-        lockedAt: pickSeed.lockedAt,
-        outcome: pickSeed.outcome,
-        pointsAwarded: pickSeed.pointsAwarded,
-        settledAt: pickSeed.settledAt
-      }
-    });
-  }
+    await ensureBadgeCatalog(tx);
 
-  await ensureBadgeCatalog(prisma);
-
-  for (const user of users) {
-    await recalculateUserStats(prisma, user.id);
-    await awardBadgesForUser(prisma, user.id);
-  }
+    for (const user of users) {
+      await recalculateUserStats(tx, user.id);
+      await awardBadgesForUser(tx, user.id);
+    }
+  });
 }
 
 main()

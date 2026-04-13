@@ -8,5 +8,9 @@ export default async function ProtectedLayout({
 }>) {
   const session = await getRequiredSession();
 
-  return <AppShell userName={session.user.name}>{children}</AppShell>;
+  return (
+    <AppShell userName={session.user.name ?? "Pool entrant"} userRole={session.user.role}>
+      {children}
+    </AppShell>
+  );
 }

@@ -1,6 +1,6 @@
 # Survivor Mundial
 
-Phase 3 survivor MVP with a real Prisma-backed survivor core and stat challenges, built with Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI primitives, Prisma, and PostgreSQL.
+Phase 4 survivor MVP with a real Prisma-backed survivor core, stat challenges, gamification, and Auth.js authentication, built with Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI primitives, Prisma, and PostgreSQL.
 
 ## Stack
 
@@ -16,6 +16,7 @@ Phase 3 survivor MVP with a real Prisma-backed survivor core and stat challenges
 
 - `/` landing page
 - `/dashboard` protected app dashboard
+- `/sign-in` Google-first authentication with optional credentials auth
 - `/picks` matchday survivor pick flow with used-team and history views
 - `/challenges` stat challenge creation and answer flow
 - `/leaderboard` survivor standings
@@ -42,7 +43,11 @@ app/
     leaderboard/page.tsx
     profile/page.tsx
     profile/actions.ts
+  api/auth/[...nextauth]/route.ts
+  sign-in/page.tsx
 components/
+  auth/google-sign-in-form.tsx
+  auth/credentials-auth-panel.tsx
   app-shell.tsx
   brand-mark.tsx
   empty-state.tsx
@@ -86,6 +91,15 @@ prisma/
    cp .env.example .env
    ```
 
+   Required auth variables:
+
+   ```bash
+   DATABASE_URL=
+   AUTH_SECRET=
+   AUTH_GOOGLE_ID=
+   AUTH_GOOGLE_SECRET=
+   ```
+
 3. Generate Prisma client:
 
    ```bash
@@ -103,12 +117,16 @@ prisma/
 The Prisma schema now models:
 
 - `User`
+- `Account`
+- `Session`
+- `VerificationToken`
 - `Matchday`
 - `Match`
 - `Pick`
 - `Challenge`
 - `ChallengeOption`
 - `ChallengeAnswer`
+- `UserRole`
 
 The survivor-specific rules now live server-side:
 
@@ -126,9 +144,17 @@ The stat challenge rules also live server-side:
 - settlement marks the correct option and awards bonus points
 - leaderboard totals include `survivorPoints + challengeBonusPoints`
 
+## Authentication
+
+- Auth.js is configured for App Router with a Prisma adapter and database sessions.
+- Google Provider is the primary sign-in method.
+- Credentials auth is available as a secondary sign-in and registration path.
+- New accounts default to the `USER` role; seeded local admin uses `ADMIN`.
+- Protected app routes redirect unauthenticated users to `/sign-in`.
+
 ## Notes
 
 - Prisma 7 is configured with `prisma.config.ts`, the `prisma-client` generator, and `@prisma/adapter-pg`.
-- App routes are protected through a mock session helper in `lib/auth.ts`.
+- App routes are protected through Auth.js session resolution in `lib/auth.ts`.
 - Survivor pick rules live in `app/(app)/picks/actions.ts` and `lib/survivor-settlement.ts`.
 - Stat challenge rules live in `app/(app)/challenges/actions.ts` and `lib/challenge-settlement.ts`.

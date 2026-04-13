@@ -1,0 +1,23 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Next.js App Router, TypeScript, Tailwind CSS, Prisma 7, PostgreSQL.
+  Architecture: Server Components by default, server actions for mutations, Prisma-backed game logic.
+  Quality: eslint, tsc --noEmit, prisma generate, next build.
+
+strict_tdd: false
+
+rules:
+  proposal:
+    - Include rollback plan for auth and schema changes.
+    - Identify affected auth, Prisma, and protected-layout files.
+  specs:
+    - Use Given/When/Then format.
+    - Focus on externally visible auth behavior.
+  design:
+    - Prefer App Router-compatible Auth.js setup.
+    - Keep Google as primary sign-in and credentials as optional secondary auth.
+  tasks:
+    - Keep tasks concrete and file-specific.
+  verify:
+    - Run prisma generate, lint, typecheck, and build after implementation.
